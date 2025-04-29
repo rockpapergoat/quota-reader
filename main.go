@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 	"os/user"
@@ -36,7 +37,21 @@ func checkdb() bool {
 	return dbStatus
 }
 
+func readdb(group string) (bool, error) {
+	var status string
+	// see if the db exists first
+	if checkdb() == true {
+		db, _ := sql.Open("sqlite3", os.Getenv("QUOTA_DB_PATH"))
+		if err := db.QueryRow("SELECT status FROM quotas where group_name = ?", group).Scan(&status); err != nil {
+			status = err
+			if err == sql.ErrNoRows {
+				return false, fmt.Errorf("status %d: unknown status", group)
+			}
+			return false, fmt.Errorf("status %d: %v", group, err)
+		}
+	}
+}
+
 func main() {
-	fmt.Println(getgroup())
-	fmt.Println(checkdb())
+	fmt.Println(readdb(getgroup()))
 }
